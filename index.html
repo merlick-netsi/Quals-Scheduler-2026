@@ -1285,7 +1285,16 @@
     });
   }
 
-  render();
+  // If the page was opened with ?code=XXXXXX in the URL, skip the landing
+  // screen and jump straight into that poll.
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlCode = urlParams.get('code');
+  if(urlCode){
+    landingCodeInput = urlCode;
+    doJoin();
+  }else{
+    render();
+  }
 })();
 </script>
 </body>
