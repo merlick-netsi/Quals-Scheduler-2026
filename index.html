@@ -1,0 +1,1292 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Find a Time</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --ink: #1C2321;
+    --ink-soft: #4A5450;
+    --paper: #F5F6F3;
+    --paper-raised: #FFFFFF;
+    --line: #D9DED9;
+    --accent: #2F6F5E;
+    --accent-deep: #163832;
+    --accent-soft: #E3EEEA;
+    --warn: #B5563A;
+    --warn-soft: #F5E7E2;
+    --radius-sm: 4px;
+    --radius-md: 8px;
+  }
+
+  * { box-sizing: border-box; }
+
+  body{
+    margin:0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: 'Inter', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+
+  .app{
+    max-width: 920px;
+    margin: 0 auto;
+    padding: 40px 24px 80px;
+  }
+
+  h1, h2, h3 { font-family: 'Fraunces', serif; font-weight: 500; margin: 0; color: var(--ink); }
+
+  .masthead{
+    display:flex;
+    align-items: baseline;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 18px;
+    margin-bottom: 32px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+  .masthead h1{ font-size: 28px; letter-spacing: -0.01em; }
+  .masthead .tag{ font-size: 13px; color: var(--ink-soft); }
+
+  .code-badge{
+    font-family: 'Inter', monospace;
+    font-size: 13px;
+    background: var(--accent-soft);
+    color: var(--accent-deep);
+    padding: 5px 10px;
+    border-radius: var(--radius-sm);
+    letter-spacing: 0.04em;
+    cursor: pointer;
+    max-width: 260px;
+    max-height: 3.6em;
+    overflow-y: auto;
+    word-break: break-all;
+    line-height: 1.2;
+    border: 1px solid transparent;
+  }
+  .code-badge:hover{ border-color: var(--accent); }
+
+  /* ---------- Landing ---------- */
+  .landing{
+    display:flex;
+    flex-direction: column;
+    gap: 28px;
+    max-width: 480px;
+    margin: 40px auto;
+  }
+  .landing p.lede{ color: var(--ink-soft); font-size: 15px; line-height: 1.6; margin: -12px 0 0; }
+  .card{
+    background: var(--paper-raised);
+    border: 1px solid var(--line);
+    border-radius: var(--radius-md);
+    padding: 24px;
+  }
+  .card h3{ font-size: 17px; margin-bottom: 14px; }
+  label{ display:block; font-size: 13px; color: var(--ink-soft); margin-bottom: 6px; }
+  input[type=text], input[type=date], input[type=time], select{
+    width: 100%;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 9px 11px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--paper);
+    color: var(--ink);
+  }
+  input:focus, select:focus, button:focus-visible{
+    outline: 2px solid var(--accent);
+    outline-offset: 1px;
+  }
+  .row{ display:flex; gap: 12px; }
+  .row > div{ flex:1; }
+
+  button{
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    font-size: 14px;
+    border: none;
+    border-radius: var(--radius-sm);
+    padding: 10px 18px;
+    cursor: pointer;
+    background: var(--ink);
+    color: var(--paper);
+  }
+  button:hover{ background: var(--accent-deep); }
+  button.secondary{
+    background: transparent;
+    color: var(--ink);
+    border: 1px solid var(--line);
+  }
+  button.secondary:hover{ background: var(--paper); border-color: var(--ink-soft); }
+  button.link{
+    background:none; color: var(--accent-deep); padding: 4px 0; text-decoration: underline;
+    font-weight: 500;
+  }
+  button.link:hover{ background: none; color: var(--accent); }
+  button:disabled{ opacity: 0.45; cursor: not-allowed; }
+
+  .divider-or{
+    display:flex; align-items:center; gap: 12px; color: var(--ink-soft); font-size: 13px;
+  }
+  .divider-or::before, .divider-or::after{ content:""; flex:1; height:1px; background: var(--line); }
+
+  .error-text{ color: var(--warn); font-size: 13px; margin-top: 8px; }
+  .error-banner{
+    color: var(--warn); font-size: 14px; font-weight: 600;
+    background: var(--warn-soft); border: 1px solid var(--warn);
+    border-radius: var(--radius-sm); padding: 12px 14px; margin: 4px 0 16px;
+  }
+
+  /* ---------- Setup ---------- */
+  .cal-header{
+    display:flex; align-items:center; justify-content:space-between; margin-bottom: 12px;
+  }
+  .cal-header button{ padding: 4px 12px; font-size: 16px; line-height:1; }
+  .cal-header h3{ font-size: 15px; }
+  .cal-grid{
+    display:grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+  }
+  .cal-weekday{ font-size: 11px; color: var(--ink-soft); text-align:center; padding: 4px 0 8px; }
+  .cal-day{
+    aspect-ratio: 1; display:flex; align-items:center; justify-content:center;
+    font-size: 13px; border-radius: var(--radius-sm); cursor:pointer; color: var(--ink);
+    background: var(--paper); user-select:none;
+  }
+  .cal-day:hover{ background: var(--accent-soft); }
+  .cal-day.past{ color: var(--line); cursor: default; }
+  .cal-day.past:hover{ background: var(--paper); }
+  .cal-day.empty{ cursor: default; }
+  .cal-day.empty:hover{ background: none; }
+  .cal-day.today{ box-shadow: inset 0 0 0 1px var(--ink-soft); }
+  .cal-day.selected{ background: var(--accent); color: var(--paper-raised); font-weight: 600; }
+  .cal-day.selected:hover{ background: var(--accent-deep); }
+  .chip-row{ display:flex; flex-wrap:wrap; gap: 8px; margin-top: 14px; }
+  .chip{
+    display:flex; align-items:center; gap: 6px;
+    background: var(--accent-soft);
+    color: var(--accent-deep);
+    font-size: 13px;
+    padding: 6px 8px 6px 12px;
+    border-radius: 999px;
+  }
+  .chip button{
+    background:none; color: var(--accent-deep); padding: 0; font-size: 15px;
+    line-height:1; width:16px; height:16px; display:flex; align-items:center; justify-content:center;
+  }
+  .chip button:hover{ background:none; color: var(--warn); }
+  .field-gap{ margin-bottom: 18px; }
+
+  /* ---------- Nav tabs ---------- */
+  .tabs{
+    display:flex; gap: 4px; border-bottom: 1px solid var(--line);
+    margin-bottom: 24px;
+  }
+  .tab{
+    font-family: 'Inter', sans-serif;
+    background:none; color: var(--ink-soft); font-weight: 600; font-size: 14px;
+    padding: 10px 4px; margin-right: 22px; border-bottom: 2px solid transparent;
+    border-radius: 0;
+  }
+  .tab:hover{ background:none; color: var(--ink); }
+  .tab.active{ color: var(--accent-deep); border-bottom-color: var(--accent); }
+
+  /* ---------- Grid ---------- */
+  .grid-wrap{ overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--paper-raised); display: inline-block; max-width: 100%; }
+  table.sched{ border-collapse: collapse; user-select: none; }
+  table.sched th, table.sched td{ border: 1px solid var(--line); }
+  table.sched th{
+    font-weight: 600; font-size: 12px; color: var(--ink-soft);
+    padding: 8px 4px; background: var(--paper); position: sticky; z-index:2;
+    cursor: pointer;
+  }
+  table.sched th.week-head{
+    top: 0;
+    cursor: default;
+    font-family: 'Fraunces', serif;
+    font-weight: 500;
+    font-size: 12.5px;
+    color: var(--accent-deep);
+    background: var(--accent-soft);
+    border-bottom: 1px solid var(--line);
+  }
+  table.sched th.date-head{ top: 33px; }
+  table.sched th:hover{ color: var(--accent-deep); }
+  table.sched th.time-col-head, td.time-col{
+    position: sticky; left:0; background: var(--paper); z-index:1;
+    font-size: 12px; color: var(--ink-soft); text-align:right; padding: 6px 10px;
+    white-space: nowrap; cursor: pointer; min-width: 64px; vertical-align: top;
+  }
+  table.sched th.time-col-head{ z-index: 4; top: 0; }
+  td.time-col:hover{ color: var(--accent-deep); }
+  td.slot{
+    width: 44px; height: 22px; cursor: pointer; transition: background 60ms ease;
+  }
+  td.slot.avail{ background: var(--accent); }
+  td.slot.avail:hover{ background: var(--accent-deep); }
+  td.slot:not(.avail):hover{ background: var(--accent-soft); }
+  td.slot.hour-start{ border-top: 1px solid #B7C1BC; }
+
+  td.heat{
+    width: 96px; min-width: 96px; text-align:left; vertical-align: top;
+    font-size: 10px; cursor: pointer; padding: 4px 6px;
+  }
+  td.heat.hour-start{ border-top: 1px solid #B7C1BC; }
+  td.heat .who-name{ display:block; line-height: 1.5; white-space: nowrap; overflow:hidden; text-overflow: ellipsis; }
+  td.heat.light-bg .who-name{ color: var(--accent-deep); }
+  td.heat.dark-bg .who-name{ color: var(--paper-raised); }
+  td.heat.empty-cell:hover{ background: var(--accent-soft) !important; }
+
+  .legend{ display:flex; align-items:center; gap:10px; font-size: 12px; color: var(--ink-soft); margin: 12px 0 0; }
+  .legend .swatch{ width:14px; height:14px; border-radius:2px; display:inline-block; }
+  .grad{ width: 120px; height: 10px; border-radius: 3px; background: linear-gradient(90deg, var(--accent-soft), var(--accent-deep)); }
+
+  .toolbar{ display:flex; justify-content: space-between; align-items:center; margin-bottom: 14px; gap: 12px; flex-wrap: wrap; }
+  .toolbar .left{ display:flex; gap: 10px; align-items:center; flex-wrap:wrap; }
+
+  .name-inline{ display:flex; gap: 10px; align-items:center; flex-wrap: wrap; }
+  .name-inline input{ max-width: 220px; }
+
+  .detail-panel{
+    margin-top: 16px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-md);
+    background: var(--paper-raised); font-size: 14px; min-height: 22px;
+  }
+  .detail-panel .who{ color: var(--ink-soft); }
+  .detail-panel strong{ color: var(--accent-deep); }
+
+  .person-list{ display:flex; flex-direction:column; gap: 10px; }
+  .person-card{
+    border: 1px solid var(--line); border-radius: var(--radius-md); background: var(--paper-raised);
+    padding: 14px 18px; display:flex; justify-content: space-between; align-items:flex-start; gap: 16px;
+  }
+  .person-card .name{ font-family:'Fraunces', serif; font-size: 16px; min-width: 130px; }
+  .person-card .ranges{ font-size: 13px; color: var(--ink-soft); line-height: 1.7; flex:1; }
+  .person-card .ranges .d{ color: var(--ink); font-weight: 600; }
+  .person-card button{ padding: 5px 10px; font-size: 12px; }
+
+  .empty-state{ color: var(--ink-soft); font-size: 14px; padding: 30px 0; text-align:center; }
+
+  textarea{
+    width: 100%;
+    font-family: inherit;
+    font-size: 14px;
+    padding: 9px 11px;
+    border: 1px solid var(--line);
+    border-radius: var(--radius-sm);
+    background: var(--paper);
+    color: var(--ink);
+    resize: vertical;
+    min-height: 60px;
+  }
+  .comment-note{ font-size: 13px; color: var(--ink-soft); font-style: italic; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--line); }
+
+  .save-row{ display:flex; align-items:center; gap: 12px; margin-top: 16px; }
+  .save-msg{ font-size: 13px; color: var(--accent-deep); }
+
+  @media (max-width: 640px){
+    .app{ padding: 24px 14px 60px; }
+    td.slot{ width: 30px; }
+    td.heat{ width: 76px; min-width: 76px; }
+    .row{ flex-direction: column; gap: 16px; }
+    .masthead{ flex-direction: column; align-items: flex-start; }
+    .masthead h1{ font-size: 24px; }
+    .person-card{ flex-direction: column; }
+    .person-card button{ align-self: flex-start; }
+  }
+  /* ---- Larger, easier-to-read text throughout ---- */
+  body{ font-size: 16px; }
+  .masthead h1{ font-size: 30px; }
+  .masthead .tag{ font-size: 14px; }
+  .card h3{ font-size: 18px; }
+  label{ font-size: 14px; }
+  .lede{ font-size: 16px; }
+  input[type=text], input[type=date], input[type=time], select, textarea{ font-size: 15px; padding: 10px 12px; }
+  button{ font-size: 15px; padding: 11px 20px; }
+  button.secondary{ font-size: 14px; }
+  .tab{ font-size: 15px; }
+  .code-badge{ font-size: 14px; }
+  .person-card .name{ font-size: 18px; }
+  .person-card .ranges{ font-size: 14.5px; }
+  .comment-note{ font-size: 14px; }
+  table.sched th{ font-size: 13px; }
+  table.sched th.time-col-head, td.time-col{ font-size: 13px; }
+  td.heat{ font-size: 11px; }
+  .chip{ font-size: 14px; }
+  .cal-weekday{ font-size: 12px; }
+  .cal-day{ font-size: 14px; }
+  .error-banner, .error-text{ font-size: 14px; }
+  .save-msg{ font-size: 14px; }
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+
+<!-- Firebase (only actually connects once real config values are pasted in below) -->
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.13.2/firebase-firestore-compat.js"></script>
+
+<script>
+(function(){
+  const app = document.getElementById('app');
+  let state = {
+    screen: 'landing',      // landing | setup | main
+    code: null,
+    config: null,           // {title, dates:[], start, end, slotMinutes}
+    slots: [],              // list of "HH:MM"
+    tab: 'availability',    // availability | results
+    resultsView: 'overlap', // overlap | person
+    currentName: '',
+    myComment: '',
+    myResponseCode: null,
+    showResponseFallback: false,
+    syncWarning: null,
+    mySelections: new Set(),// "date|HH:MM"
+    dragging: false,
+    dragMode: null,         // true = painting available, false = erasing
+    people: [],             // [{name, slug, slots:[...]}]
+    saveMsg: '',
+    hoverDetail: null
+  };
+
+  function slugify(name){
+    return name.trim().toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/(^-|-$)/g,'') || 'anon';
+  }
+
+  function pad(n){ return n.toString().padStart(2,'0'); }
+
+  function buildSlots(start, end, slotMinutes){
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    let cur = sh*60+sm;
+    const endMin = eh*60+em;
+    const out = [];
+    while(cur < endMin){
+      out.push(pad(Math.floor(cur/60)) + ':' + pad(cur%60));
+      cur += slotMinutes;
+    }
+    return out;
+  }
+
+  function formatTime(hhmm){
+    let [h,m] = hhmm.split(':').map(Number);
+    const ap = h >= 12 ? 'PM' : 'AM';
+    let h12 = h % 12; if(h12===0) h12=12;
+    return h12 + (m ? ':'+pad(m) : ':00') + ' ' + ap;
+  }
+
+  function formatDate(dstr){
+    const d = new Date(dstr + 'T00:00:00');
+    return d.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' });
+  }
+
+  function getWeekStart(dateStr){
+    const d = new Date(dateStr + 'T00:00:00');
+    const day = d.getDay(); // 0 = Sun ... 6 = Sat
+    const diffToMonday = (day === 0) ? 6 : day - 1;
+    const monday = new Date(d);
+    monday.setDate(d.getDate() - diffToMonday);
+    return monday.toISOString().slice(0,10);
+  }
+
+  function groupDatesByWeek(dates){
+    const groups = [];
+    let curKey = null, curGroup = null;
+    dates.forEach(d=>{
+      const wk = getWeekStart(d);
+      if(wk !== curKey){
+        curKey = wk;
+        curGroup = { weekStart: wk, dates: [] };
+        groups.push(curGroup);
+      }
+      curGroup.dates.push(d);
+    });
+    return groups;
+  }
+
+  function formatWeekLabel(weekStart){
+    const d = new Date(weekStart + 'T00:00:00');
+    return 'Week of ' + d.toLocaleDateString(undefined, { month:'short', day:'numeric' });
+  }
+
+  function renderWeekHeaderRows(cfg, dateThFn){
+    const groups = groupDatesByWeek(cfg.dates);
+    const weekRow = `<tr><th class="time-col-head" id="clearAllHead" title="Clear all" rowspan="2">Time</th>${
+      groups.map(g=>`<th colspan="${g.dates.length}" class="week-head">${formatWeekLabel(g.weekStart)}</th>`).join('')
+    }</tr>`;
+    const dateRow = `<tr>${cfg.dates.map(dateThFn).join('')}</tr>`;
+    return weekRow + dateRow;
+  }
+
+  function randCode(){
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let out = '';
+    for(let i=0;i<6;i++) out += chars[Math.floor(Math.random()*chars.length)];
+    return out;
+  }
+
+  // ---- Portable encode/decode: the poll (and each response) travels inside the code itself,
+  // so joining a poll never depends on any external service. ----
+  function b64encode(obj){
+    return btoa(unescape(encodeURIComponent(JSON.stringify(obj))));
+  }
+  function b64decode(str){
+    try{
+      const clean = str.replace(/\s+/g, '');
+      return JSON.parse(decodeURIComponent(escape(atob(clean))));
+    }catch(e){ return null; }
+  }
+
+  // ---- Local browser storage (works fully offline, persists on this device/browser only) ----
+  let memStore = {};
+  function lsGet(key){
+    try{ if(typeof localStorage !== 'undefined') return localStorage.getItem(key); }catch(e){}
+    return Object.prototype.hasOwnProperty.call(memStore, key) ? memStore[key] : null;
+  }
+  function lsSet(key, value){
+    try{ if(typeof localStorage !== 'undefined'){ localStorage.setItem(key, value); return; } }catch(e){}
+    memStore[key] = value;
+  }
+  function lsDelete(key){
+    try{ if(typeof localStorage !== 'undefined'){ localStorage.removeItem(key); return; } }catch(e){}
+    delete memStore[key];
+  }
+  function lsListPrefix(prefix){
+    const keys = [];
+    try{
+      if(typeof localStorage !== 'undefined'){
+        for(let i=0;i<localStorage.length;i++){ const k = localStorage.key(i); if(k && k.startsWith(prefix)) keys.push(k); }
+        return keys;
+      }
+    }catch(e){}
+    Object.keys(memStore).forEach(k=>{ if(k.startsWith(prefix)) keys.push(k); });
+    return keys;
+  }
+
+  // ---- Cloud sync via Firebase Firestore ----
+  // Paste your Firebase project's config below (from the Firebase console:
+  // Project settings > General > Your apps > SDK setup and configuration).
+  // Until real values are pasted in, the tool runs in local/self-contained mode —
+  // fully working, just without automatic cross-device syncing.
+  const firebaseConfig = {
+    apiKey: "AIzaSyBtseJAdw37vTT2njGmQZ4PJlmwC0P363A",
+    authDomain: "quals-exam-2026.firebaseapp.com",
+    projectId: "quals-exam-2026",
+    storageBucket: "quals-exam-2026.firebasestorage.app",
+    messagingSenderId: "835266757977",
+    appId: "1:835266757977:web:a8831ce653042c9960b848"
+  };
+
+  let hasCloud = false;
+  let db = null;
+  try{
+    if(typeof firebase !== 'undefined' && firebaseConfig.apiKey && firebaseConfig.apiKey.indexOf('YOUR_') !== 0){
+      firebase.initializeApp(firebaseConfig);
+      db = firebase.firestore();
+      hasCloud = true;
+    }
+  }catch(e){ hasCloud = false; db = null; }
+
+  // Firestore is used purely as a flat key-value store (one "kv" collection,
+  // one document per key) so the rest of the app never has to know it's Firestore
+  // underneath — same shape as the local storage helpers above.
+  async function cloudSafeSet(key, value){
+    if(!hasCloud) return true;
+    try{ await db.collection('kv').doc(key).set({ value: value, updatedAt: Date.now() }); return true; }
+    catch(e){ return false; }
+  }
+  async function cloudSafeList(prefix){
+    if(!hasCloud) return [];
+    try{
+      const end = prefix + '\uf8ff';
+      const snap = await db.collection('kv')
+        .where(firebase.firestore.FieldPath.documentId(), '>=', prefix)
+        .where(firebase.firestore.FieldPath.documentId(), '<', end)
+        .get();
+      return snap.docs.map(d => d.id);
+    }catch(e){ return []; }
+  }
+  async function cloudSafeGet(key){
+    if(!hasCloud) return null;
+    try{
+      const doc = await db.collection('kv').doc(key).get();
+      return doc.exists ? doc.data().value : null;
+    }catch(e){ return null; }
+  }
+  async function cloudSafeDelete(key){
+    if(!hasCloud) return;
+    try{ await db.collection('kv').doc(key).delete(); }catch(e){}
+  }
+
+  async function loadPeople(pollId){
+    const merged = {};
+    lsListPrefix('schedpoll:'+pollId+':avail:').forEach(k=>{
+      const raw = lsGet(k);
+      if(raw){ try{ const p = JSON.parse(raw); merged[k.split(':avail:')[1]] = p; }catch(e){} }
+    });
+    const cloudKeys = await cloudSafeList('sched:'+pollId+':avail:');
+    for(const k of cloudKeys){
+      const raw = await cloudSafeGet(k);
+      if(!raw) continue;
+      try{
+        const p = JSON.parse(raw);
+        const slug = k.split(':avail:')[1];
+        if(!merged[slug] || (p.updatedAt||0) >= (merged[slug].updatedAt||0)) merged[slug] = p;
+      }catch(e){}
+    }
+    const people = Object.values(merged);
+    people.sort((a,b)=> a.name.localeCompare(b.name));
+    return people;
+  }
+
+  async function savePerson(pollId, name, slotsArr, comment){
+    const slug = slugify(name);
+    const payload = { name: name.trim(), slots: slotsArr, comment: (comment||'').trim(), updatedAt: Date.now() };
+    lsSet('schedpoll:'+pollId+':avail:'+slug, JSON.stringify(payload));
+    let cloudOk = await cloudSafeSet('sched:'+pollId+':avail:'+slug, JSON.stringify(payload));
+    if(hasCloud && !cloudOk){
+      await new Promise(r=>setTimeout(r, 600));
+      cloudOk = await cloudSafeSet('sched:'+pollId+':avail:'+slug, JSON.stringify(payload));
+    }
+    return { payload, cloudOk: hasCloud ? cloudOk : true };
+  }
+
+  async function deletePerson(pollId, name){
+    const slug = slugify(name);
+    lsDelete('schedpoll:'+pollId+':avail:'+slug);
+    await cloudSafeDelete('sched:'+pollId+':avail:'+slug);
+  }
+
+  function mergeRanges(dateStr, daySlots, allSlots, slotMinutes){
+    // daySlots: sorted array of HH:MM strings that are selected for this date
+    if(daySlots.length===0) return [];
+    const idxOf = t => allSlots.indexOf(t);
+    const sorted = daySlots.slice().sort((a,b)=> idxOf(a)-idxOf(b));
+    const ranges = [];
+    let start = sorted[0], prev = sorted[0];
+    for(let i=1;i<sorted.length;i++){
+      const t = sorted[i];
+      if(idxOf(t) === idxOf(prev)+1){ prev = t; continue; }
+      ranges.push([start, prev]);
+      start = t; prev = t;
+    }
+    ranges.push([start, prev]);
+    return ranges.map(([s,e])=>{
+      const endIdx = idxOf(e);
+      const endLabel = endIdx+1 < allSlots.length ? allSlots[endIdx+1] : addMinutes(e, slotMinutes);
+      return formatTime(s) + '\u2013' + formatTime(endLabel);
+    });
+  }
+
+  function addMinutes(hhmm, mins){
+    let [h,m] = hhmm.split(':').map(Number);
+    let total = h*60+m+mins;
+    return pad(Math.floor(total/60)%24)+':'+pad(total%60);
+  }
+
+  function render(){
+    if(state.screen === 'landing') return renderLanding();
+    if(state.screen === 'setup') return renderSetup();
+    if(state.screen === 'main') return renderMain();
+  }
+
+  // ---------------- Landing ----------------
+  let landingCodeInput = '';
+  let landingError = '';
+  function renderLanding(){
+    app.innerHTML = `
+      <div class="masthead">
+        <h1>Find a Time</h1>
+        <div class="tag">a plainer when2meet</div>
+      </div>
+      <div class="landing">
+        <p class="lede">Create a poll, share the code with everyone, and see the overlap as people mark when they're free.</p>
+        <div class="card">
+          <h3>Join an existing poll</h3>
+          <label for="joinCode">Enter the poll code</label>
+          <textarea id="joinCode" placeholder="e.g. K7QX2M" style="min-height:44px; font-family:monospace; font-size:13px;">${landingCodeInput}</textarea>
+          <div class="error-text" id="joinError">${landingError}</div>
+          <div style="margin-top:14px;"><button id="joinBtn">Go to poll</button></div>
+        </div>
+        <div class="divider-or">or</div>
+        <div class="card">
+          <h3>Start a new poll</h3>
+          <p style="margin:0 0 14px; font-size:13px; color:var(--ink-soft);">Set the dates and time window you're considering, then get a code to hand out.</p>
+          <button id="newBtn" class="secondary">Create a new poll</button>
+        </div>
+      </div>
+    `;
+    document.getElementById('joinCode').addEventListener('input', e=>{
+      landingCodeInput = e.target.value;
+    });
+    document.getElementById('joinBtn').addEventListener('click', doJoin);
+    document.getElementById('newBtn').addEventListener('click', ()=>{
+      state.screen = 'setup';
+      render();
+    });
+  }
+
+  async function doJoin(){
+    const raw = landingCodeInput.trim();
+    if(!raw){ landingError = 'Enter the poll code first.'; render(); return; }
+    const joinBtn = document.getElementById('joinBtn');
+    if(joinBtn){ joinBtn.disabled = true; joinBtn.textContent = 'Looking\u2026'; }
+    let cfg = b64decode(raw);
+    if(!cfg){
+      let stored = await cloudSafeGet('sched:'+raw.toUpperCase()+':config');
+      if(!stored){
+        await new Promise(r=>setTimeout(r, 500));
+        stored = await cloudSafeGet('sched:'+raw.toUpperCase()+':config');
+      }
+      if(stored){ try{ cfg = JSON.parse(stored); }catch(e){ cfg = null; } }
+    }
+    if(joinBtn){ joinBtn.disabled = false; joinBtn.textContent = 'Go to poll'; }
+    if(!cfg || !cfg.id || !Array.isArray(cfg.dates)){
+      landingError = !hasCloud
+        ? "This code needs live syncing to look up, but that isn't available here. Ask whoever created the poll to send you the full code instead, or open this from the same artifact they used."
+        : "Couldn't find a poll with that code. Double-check it against what was shared, and make sure whoever created it has kept the poll open at least once so it's had a chance to sync.";
+      render(); return;
+    }
+    state.code = raw;
+    state.pollId = cfg.id;
+    state.config = cfg;
+    state.slots = buildSlots(cfg.start, cfg.end, cfg.slotMinutes);
+    lsSet('schedpoll:'+cfg.id+':config', JSON.stringify(cfg));
+    state.people = await loadPeople(cfg.id);
+    state.screen = 'main';
+    landingError = '';
+    render();
+  }
+
+  // ---------------- Setup ----------------
+  let setupTitle = '';
+  let setupDates = [];
+  let setupStart = '09:00';
+  let setupEnd = '17:00';
+  let setupSlotMin = 30;
+  let setupError = '';
+  const today = new Date();
+  let setupCalYear = today.getFullYear();
+  let setupCalMonth = today.getMonth();
+
+  function todayStr(){
+    const d = new Date();
+    return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+  }
+
+  function buildCalendarGrid(){
+    const year = setupCalYear, month = setupCalMonth;
+    const firstWeekday = new Date(year, month, 1).getDay();
+    const numDays = new Date(year, month+1, 0).getDate();
+    const t = todayStr();
+    const weekdays = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+    let cells = weekdays.map(w=>`<div class="cal-weekday">${w}</div>`).join('');
+    for(let i=0;i<firstWeekday;i++) cells += `<div class="cal-day empty"></div>`;
+    for(let day=1; day<=numDays; day++){
+      const dstr = year+'-'+pad(month+1)+'-'+pad(day);
+      const isPast = dstr < t;
+      const isToday = dstr === t;
+      const isSel = setupDates.includes(dstr);
+      cells += `<div class="cal-day ${isPast?'past':''} ${isToday?'today':''} ${isSel?'selected':''}" data-date="${dstr}">${day}</div>`;
+    }
+    return cells;
+  }
+
+  function renderCalendar(){
+    const grid = document.getElementById('calGrid');
+    const label = document.getElementById('calLabel');
+    if(!grid) return;
+    label.textContent = new Date(setupCalYear, setupCalMonth, 1).toLocaleDateString(undefined, { month:'long', year:'numeric' });
+    grid.innerHTML = buildCalendarGrid();
+    grid.querySelectorAll('.cal-day[data-date]:not(.past)').forEach(cell=>{
+      cell.addEventListener('click', ()=>{
+        const d = cell.dataset.date;
+        const nowSelected = !setupDates.includes(d);
+        toggleCalDate(d, nowSelected);
+        cell.classList.toggle('selected', nowSelected);
+        renderChips();
+      });
+    });
+  }
+
+  function toggleCalDate(dstr, on){
+    const idx = setupDates.indexOf(dstr);
+    if(on && idx===-1) setupDates.push(dstr);
+    if(!on && idx!==-1) setupDates.splice(idx,1);
+    setupDates.sort();
+  }
+
+  function renderSetup(){
+    app.innerHTML = `
+      <div class="masthead">
+        <h1>New poll</h1>
+        <button class="secondary" id="backBtn">Back</button>
+      </div>
+      <div class="card field-gap">
+        <h3>What's this for?</h3>
+        <label for="titleInput">Title</label>
+        <input id="titleInput" type="text" placeholder="e.g. Dissertation committee meeting" value="${setupTitle}">
+      </div>
+      <div class="card field-gap">
+        <h3>Which dates are in play?</h3>
+        <p style="margin: -6px 0 14px; font-size:13px; color:var(--ink-soft);">Click each date you want to include. Click a selected date again to remove it.</p>
+        <div class="cal-header">
+          <button type="button" class="secondary" id="calPrev" aria-label="Previous month">&lsaquo;</button>
+          <h3 id="calLabel"></h3>
+          <button type="button" class="secondary" id="calNext" aria-label="Next month">&rsaquo;</button>
+        </div>
+        <div class="cal-grid" id="calGrid"></div>
+        <div class="chip-row" id="dateChips"></div>
+      </div>
+      <div class="card field-gap">
+        <h3>What hours of the day?</h3>
+        <div class="row">
+          <div>
+            <label for="startInput">Earliest</label>
+            <input id="startInput" type="time" value="${setupStart}">
+          </div>
+          <div>
+            <label for="endInput">Latest</label>
+            <input id="endInput" type="time" value="${setupEnd}">
+          </div>
+          <div>
+            <label for="slotInput">Slot length</label>
+            <select id="slotInput">
+              <option value="15" ${setupSlotMin==15?'selected':''}>15 minutes</option>
+              <option value="30" ${setupSlotMin==30?'selected':''}>30 minutes</option>
+              <option value="60" ${setupSlotMin==60?'selected':''}>60 minutes</option>
+            </select>
+          </div>
+        </div>
+      </div>
+      ${setupError ? `<div class="error-banner">${escapeHtml(setupError)}</div>` : ''}
+      <div style="margin-top:8px;"><button id="createBtn">Create poll</button></div>
+    `;
+    renderChips();
+    renderCalendar();
+    document.getElementById('backBtn').addEventListener('click', ()=>{ state.screen='landing'; render(); });
+    document.getElementById('titleInput').addEventListener('input', e=> setupTitle = e.target.value);
+    document.getElementById('calPrev').addEventListener('click', ()=>{
+      setupCalMonth--; if(setupCalMonth<0){ setupCalMonth=11; setupCalYear--; }
+      renderCalendar();
+    });
+    document.getElementById('calNext').addEventListener('click', ()=>{
+      setupCalMonth++; if(setupCalMonth>11){ setupCalMonth=0; setupCalYear++; }
+      renderCalendar();
+    });
+    document.getElementById('startInput').addEventListener('input', e=> setupStart = e.target.value);
+    document.getElementById('endInput').addEventListener('input', e=> setupEnd = e.target.value);
+    document.getElementById('slotInput').addEventListener('change', e=> setupSlotMin = Number(e.target.value));
+    document.getElementById('createBtn').addEventListener('click', doCreate);
+  }
+
+  function renderChips(){
+    const wrap = document.getElementById('dateChips');
+    if(!wrap) return;
+    if(setupDates.length===0){
+      wrap.innerHTML = `<span style="font-size:13px; color:var(--ink-soft);">No dates added yet.</span>`;
+      return;
+    }
+    wrap.innerHTML = setupDates.map((d,i)=>`
+      <span class="chip">${formatDate(d)}<button data-i="${i}">&times;</button></span>
+    `).join('');
+    wrap.querySelectorAll('button').forEach(b=>{
+      b.addEventListener('click', ()=>{
+        setupDates.splice(Number(b.dataset.i),1);
+        render();
+      });
+    });
+  }
+
+  async function doCreate(){
+    if(!setupTitle.trim()){ setupError = 'Give the poll a title.'; render(); return; }
+    if(setupDates.length===0){ setupError = 'Add at least one date.'; render(); return; }
+    if(setupStart >= setupEnd){ setupError = 'The latest time needs to be after the earliest.'; render(); return; }
+    setupError = '';
+    const createBtn = document.getElementById('createBtn');
+    if(createBtn){ createBtn.disabled = true; createBtn.textContent = 'Creating\u2026'; }
+    try{
+      const config = {
+        id: randCode(),
+        title: setupTitle.trim(),
+        dates: setupDates.slice(),
+        start: setupStart,
+        end: setupEnd,
+        slotMinutes: setupSlotMin
+      };
+      lsSet('schedpoll:'+config.id+':config', JSON.stringify(config));
+      let cloudOk = await cloudSafeSet('sched:'+config.id+':config', JSON.stringify(config));
+      if(hasCloud && !cloudOk){
+        await new Promise(r=>setTimeout(r, 600));
+        cloudOk = await cloudSafeSet('sched:'+config.id+':config', JSON.stringify(config));
+      }
+      // If cloud sync is available but genuinely failed, fall back to a self-contained
+      // code (works without any lookup) rather than handing out a short code nobody can resolve.
+      const code = (hasCloud && cloudOk) ? config.id : b64encode(config);
+      state.code = code;
+      state.pollId = config.id;
+      state.config = config;
+      state.slots = buildSlots(config.start, config.end, config.slotMinutes);
+      state.people = [];
+      state.screen = 'main';
+      state.syncWarning = (hasCloud && !cloudOk)
+        ? "This poll couldn't be synced for automatic sharing just now, so the code below carries the poll's details directly instead of a short lookup code — it'll still work for anyone you send it to, it's just longer. You can try recreating the poll in a moment if you'd prefer a short code."
+        : null;
+      setupTitle=''; setupDates=[]; setupStart='09:00'; setupEnd='17:00'; setupSlotMin=30;
+      render();
+    }catch(err){
+      setupError = "Something went wrong creating the poll. Please try again.";
+      if(createBtn){ createBtn.disabled = false; createBtn.textContent = 'Create poll'; }
+      render();
+    }
+  }
+
+  // ---------------- Main (availability + results) ----------------
+  function renderMain(){
+    const cfg = state.config;
+    app.innerHTML = `
+      <div class="masthead">
+        <div>
+          <div style="display:flex; align-items:center; gap:8px;" id="titleRow">
+            <h1 id="pollTitleText">${escapeHtml(cfg.title)}</h1>
+            <button class="secondary" id="renameBtn" title="Rename this poll" style="padding:4px 10px; font-size:12px;">Rename</button>
+          </div>
+          <div class="tag">${cfg.dates.length} date${cfg.dates.length>1?'s':''} &middot; ${formatTime(cfg.start)}&ndash;${formatTime(cfg.end)}</div>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <span class="code-badge" id="codeBadge" title="Your poll code">${escapeHtml(state.code)}</span>
+          <button class="secondary" id="copyCode" title="Copy the poll code to share">Copy code</button>
+          <button class="secondary" id="leaveBtn">Leave poll</button>
+        </div>
+      </div>
+      ${state.syncWarning ? `
+      <div class="error-banner" id="syncWarningBanner" style="display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+        <span>${escapeHtml(state.syncWarning)}</span>
+        <button class="secondary" id="dismissSyncWarning" style="padding:4px 10px; font-size:12px; flex-shrink:0;">Dismiss</button>
+      </div>
+      ` : ''}
+      <div class="tabs">
+        <button class="tab ${state.tab==='availability'?'active':''}" id="tabAvail">Add your availability</button>
+        <button class="tab ${state.tab==='results'?'active':''}" id="tabResults">See results (${state.people.length})</button>
+      </div>
+      <div id="tabBody"></div>
+    `;
+    document.getElementById('renameBtn').addEventListener('click', ()=>{
+      const row = document.getElementById('titleRow');
+      row.innerHTML = `
+        <input id="titleRenameInput" type="text" value="${escapeHtml(cfg.title)}" style="font-size:22px; font-family:'Fraunces',serif; max-width:360px;">
+        <button id="titleSaveBtn" style="padding:6px 12px;">Save</button>
+        <button class="secondary" id="titleCancelBtn" style="padding:6px 12px;">Cancel</button>
+      `;
+      const input = document.getElementById('titleRenameInput');
+      input.focus();
+      input.select();
+      async function commit(){
+        const newTitle = input.value.trim();
+        if(newTitle && newTitle !== cfg.title){
+          cfg.title = newTitle;
+          lsSet('schedpoll:'+state.pollId+':config', JSON.stringify(cfg));
+          await cloudSafeSet('sched:'+state.pollId+':config', JSON.stringify(cfg));
+        }
+        renderMain();
+      }
+      document.getElementById('titleSaveBtn').addEventListener('click', commit);
+      document.getElementById('titleCancelBtn').addEventListener('click', ()=> renderMain());
+      input.addEventListener('keydown', e=>{
+        if(e.key === 'Enter') commit();
+        if(e.key === 'Escape') renderMain();
+      });
+    });
+    function selectBadgeText(){
+      const range = document.createRange();
+      range.selectNodeContents(document.getElementById('codeBadge'));
+      const sel = window.getSelection();
+      sel.removeAllRanges();
+      sel.addRange(range);
+    }
+    document.getElementById('copyCode').addEventListener('click', async ()=>{
+      const btn = document.getElementById('copyCode');
+      const old = btn.textContent;
+      let copied = false;
+      try{
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          await navigator.clipboard.writeText(state.code);
+          copied = true;
+        }
+      }catch(e){ copied = false; }
+      if(!copied){
+        try{
+          selectBadgeText();
+          copied = document.execCommand('copy');
+        }catch(e){ copied = false; }
+      }
+      if(copied){
+        btn.textContent = 'Copied!';
+      }else{
+        selectBadgeText();
+        btn.textContent = 'Selected — press Ctrl/Cmd+C';
+      }
+      setTimeout(()=>{ btn.textContent = old; }, 2000);
+    });
+    document.getElementById('codeBadge').addEventListener('click', selectBadgeText);
+    if(document.getElementById('dismissSyncWarning')){
+      document.getElementById('dismissSyncWarning').addEventListener('click', ()=>{
+        state.syncWarning = null;
+        renderMain();
+      });
+    }
+    document.getElementById('leaveBtn').addEventListener('click', ()=>{
+      state = Object.assign(state, { screen:'landing', code:null, pollId:null, config:null, mySelections:new Set(), currentName:'', myComment:'', myResponseCode:null, syncWarning:null, showResponseFallback:false });
+      landingCodeInput=''; landingError='';
+      render();
+    });
+    document.getElementById('tabAvail').addEventListener('click', ()=>{ state.tab='availability'; render(); });
+    document.getElementById('tabResults').addEventListener('click', async ()=>{
+      state.tab='results';
+      state.people = await loadPeople(state.pollId);
+      render();
+    });
+
+    if(state.tab === 'availability') renderAvailabilityTab();
+    else renderResultsTab();
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  function isHourStart(t){ return t.endsWith(':00'); }
+
+  // ----- Availability tab -----
+  function renderAvailabilityTab(){
+    const cfg = state.config;
+    const body = document.getElementById('tabBody');
+    body.innerHTML = `
+      <div class="toolbar">
+        <div class="left name-inline">
+          <label style="margin:0;" for="nameInput">Your name</label>
+          <input id="nameInput" type="text" placeholder="Full name" value="${escapeHtml(state.currentName)}">
+        </div>
+        <button class="secondary" id="clearMineBtn">Clear my selections</button>
+      </div>
+      <p style="font-size:13px; color:var(--ink-soft); margin: -6px 0 14px;">Click a cell, or click and drag, to mark when you're free. Click a column or row header to toggle it all at once.</p>
+      <div class="grid-wrap">
+        <table class="sched" id="availGrid">
+          <thead>${renderWeekHeaderRows(cfg, d=>`<th class="date-head" data-date="${d}" title="Toggle whole day">${formatDate(d)}</th>`)}</thead>
+          <tbody>
+            ${state.slots.map(t=>`
+              <tr>
+                <td class="time-col ${isHourStart(t)?'hour-start':''}" data-time="${t}">${formatTime(t)}</td>
+                ${cfg.dates.map(d=>{
+                  const key = d+'|'+t;
+                  const on = state.mySelections.has(key);
+                  return `<td class="slot ${on?'avail':''} ${isHourStart(t)?'hour-start':''}" data-key="${key}"></td>`;
+                }).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="field-gap" style="margin-top:18px;">
+        <label for="commentInput">Comments (optional) &mdash; visible to everyone in the results</label>
+        <textarea id="commentInput" placeholder="e.g. Could do earlier on Thursday if that helps.">${escapeHtml(state.myComment)}</textarea>
+      </div>
+      <div class="save-row">
+        <button id="saveBtn">Save my availability</button>
+        <span class="save-msg" id="saveMsg">${state.saveMsg}</span>
+      </div>
+      ${((!hasCloud || state.showResponseFallback) && state.myResponseCode) ? `
+      <div class="card field-gap" style="margin-top:20px;">
+        <h3 style="font-size:15px;">Send this to whoever's collecting responses</h3>
+        <p style="margin:0 0 10px; font-size:13px; color:var(--ink-soft);">Copy this code and send it to them (email, Slack, text) so your answer shows up in their Results tab.</p>
+        <textarea id="responseCodeBox" readonly style="min-height:70px; font-family:monospace; font-size:12px;">${state.myResponseCode}</textarea>
+        <div style="margin-top:10px;"><button class="secondary" id="copyResponseBtn">Copy response code</button></div>
+      </div>
+      ` : ''}
+    `;
+
+    document.getElementById('commentInput').addEventListener('input', e=>{
+      state.myComment = e.target.value;
+    });
+
+    document.getElementById('nameInput').addEventListener('input', async e=>{
+      state.currentName = e.target.value;
+      state.saveMsg = '';
+      document.getElementById('saveMsg').textContent = '';
+    });
+    document.getElementById('nameInput').addEventListener('blur', async ()=>{
+      // try to load existing selections for this name so people can edit
+      const nm = state.currentName.trim();
+      if(!nm) return;
+      const slug = slugify(nm);
+      let raw = lsGet('schedpoll:'+state.pollId+':avail:'+slug);
+      if(!raw) raw = await cloudSafeGet('sched:'+state.pollId+':avail:'+slug);
+      if(raw){
+        try{
+          const payload = JSON.parse(raw);
+          state.mySelections = new Set(payload.slots);
+          state.myComment = payload.comment || '';
+          renderAvailabilityTab();
+        }catch(e){}
+      }
+    });
+
+    document.getElementById('clearMineBtn').addEventListener('click', ()=>{
+      state.mySelections = new Set();
+      renderAvailabilityTab();
+    });
+
+    // header toggles (whole date column)
+    document.querySelectorAll('#availGrid thead th[data-date]').forEach(th=>{
+      th.addEventListener('click', ()=>{
+        const d = th.dataset.date;
+        const keys = state.slots.map(t=> d+'|'+t);
+        const allOn = keys.every(k=> state.mySelections.has(k));
+        keys.forEach(k=> allOn ? state.mySelections.delete(k) : state.mySelections.add(k));
+        renderAvailabilityTab();
+      });
+    });
+    document.getElementById('clearAllHead').addEventListener('click', ()=>{
+      state.mySelections = new Set();
+      renderAvailabilityTab();
+    });
+    // row toggles (whole time across dates)
+    document.querySelectorAll('#availGrid td.time-col').forEach(td=>{
+      td.addEventListener('click', ()=>{
+        const t = td.dataset.time;
+        const keys = cfg.dates.map(d=> d+'|'+t);
+        const allOn = keys.every(k=> state.mySelections.has(k));
+        keys.forEach(k=> allOn ? state.mySelections.delete(k) : state.mySelections.add(k));
+        renderAvailabilityTab();
+      });
+    });
+
+    // drag-select
+    let dragging = false, mode = true;
+    const cells = document.querySelectorAll('#availGrid td.slot');
+    function applyCell(td){
+      const key = td.dataset.key;
+      if(mode){ state.mySelections.add(key); td.classList.add('avail'); }
+      else{ state.mySelections.delete(key); td.classList.remove('avail'); }
+    }
+    cells.forEach(td=>{
+      td.addEventListener('pointerdown', e=>{
+        e.preventDefault();
+        dragging = true;
+        mode = !state.mySelections.has(td.dataset.key);
+        applyCell(td);
+      });
+      td.addEventListener('pointerenter', ()=>{
+        if(dragging) applyCell(td);
+      });
+    });
+    window.addEventListener('pointerup', ()=>{ dragging = false; }, { once:false });
+
+    document.getElementById('saveBtn').addEventListener('click', async ()=>{
+      const nm = state.currentName.trim();
+      const msg = document.getElementById('saveMsg');
+      if(!nm){ msg.style.color='var(--warn)'; msg.textContent='Enter your name first.'; return; }
+      if(state.mySelections.size === 0){ msg.style.color='var(--warn)'; msg.textContent='Select at least one time slot.'; return; }
+      const saveBtn = document.getElementById('saveBtn');
+      saveBtn.disabled = true;
+      const { payload, cloudOk } = await savePerson(state.pollId, nm, Array.from(state.mySelections), state.myComment);
+      saveBtn.disabled = false;
+      state.people = await loadPeople(state.pollId);
+      state.myResponseCode = b64encode({ name: payload.name, slots: payload.slots, comment: payload.comment });
+      if(cloudOk){
+        msg.style.color = 'var(--accent-deep)';
+        msg.textContent = 'Saved.';
+        state.saveMsg = 'Saved.';
+        state.showResponseFallback = false;
+      }else{
+        msg.style.color = 'var(--warn)';
+        msg.textContent = "Saved on this device, but couldn't confirm it synced — check your connection and try saving again, or send your response code below just in case.";
+        state.saveMsg = msg.textContent;
+        state.showResponseFallback = true;
+      }
+      renderMain();
+    });
+
+    if(document.getElementById('copyResponseBtn')){
+      document.getElementById('copyResponseBtn').addEventListener('click', ()=>{
+        navigator.clipboard && navigator.clipboard.writeText(state.myResponseCode).catch(()=>{});
+        const btn = document.getElementById('copyResponseBtn');
+        const old = btn.textContent; btn.textContent = 'Copied!';
+        setTimeout(()=>{ btn.textContent = old; }, 1200);
+      });
+    }
+  }
+
+  // ----- Results tab -----
+  let importText = '';
+  let importMsg = '';
+  function renderResultsTab(){
+    const cfg = state.config;
+    const body = document.getElementById('tabBody');
+    body.innerHTML = `
+      <div class="toolbar">
+        <div class="left">
+          <button class="tab ${state.resultsView==='overlap'?'active':''}" id="viewOverlap" style="margin-right:0;">Overlap by date &amp; time</button>
+          <button class="tab ${state.resultsView==='person'?'active':''}" id="viewPerson" style="margin-right:0;">Breakdown by person</button>
+        </div>
+        ${hasCloud ? `<button class="secondary" id="refreshBtn">Refresh</button>` : ''}
+      </div>
+      <div id="resultsBody"></div>
+      ${!hasCloud ? `
+      <div class="card field-gap" style="margin-top:22px;">
+        <h3 style="font-size:15px;">Add a response someone sent you</h3>
+        <p style="margin:0 0 10px; font-size:13px; color:var(--ink-soft);">Paste one or more response codes below (one per line) to add them here.</p>
+        <textarea id="importBox" placeholder="Paste response code(s) here" style="min-height:70px; font-family:monospace; font-size:12px;">${importText}</textarea>
+        <div class="error-text" id="importMsg" style="color:${importMsg && importMsg.startsWith('Added') ? 'var(--accent-deep)' : 'var(--warn)'};">${importMsg}</div>
+        <div style="margin-top:10px;"><button class="secondary" id="importBtn">Add responses</button></div>
+      </div>
+      ` : ''}
+    `;
+    document.getElementById('viewOverlap').addEventListener('click', ()=>{ state.resultsView='overlap'; renderResultsTab(); });
+    document.getElementById('viewPerson').addEventListener('click', ()=>{ state.resultsView='person'; renderResultsTab(); });
+    if(hasCloud && document.getElementById('refreshBtn')){
+      document.getElementById('refreshBtn').addEventListener('click', async ()=>{
+        state.people = await loadPeople(state.pollId);
+        renderResultsTab();
+      });
+    }
+    if(!hasCloud){
+    document.getElementById('importBox').addEventListener('input', e=>{ importText = e.target.value; });
+    document.getElementById('importBtn').addEventListener('click', async ()=>{
+      const lines = importText.split('\n').map(l=>l.trim()).filter(Boolean);
+      if(lines.length===0){ importMsg = 'Paste at least one code first.'; renderResultsTab(); return; }
+      let added = 0, failed = 0;
+      for(const line of lines){
+        const decoded = b64decode(line);
+        if(decoded && decoded.name && Array.isArray(decoded.slots)){
+          await savePerson(state.pollId, decoded.name, decoded.slots, decoded.comment || '');
+          added++;
+        } else {
+          failed++;
+        }
+      }
+      state.people = await loadPeople(state.pollId);
+      importText = '';
+      importMsg = added > 0
+        ? `Added ${added} response${added>1?'s':''}.` + (failed ? ` ${failed} line${failed>1?'s':''} couldn't be read.` : '')
+        : "Couldn't read any of those codes — check they were copied in full.";
+      renderMain();
+    });
+    }
+
+    if(state.people.length === 0){
+      document.getElementById('resultsBody').innerHTML = `<div class="empty-state">No one has submitted their availability yet. Share the code and check back.</div>`;
+      return;
+    }
+
+    if(state.resultsView === 'overlap') renderOverlap();
+    else renderPersonBreakdown();
+  }
+
+  function renderOverlap(){
+    const cfg = state.config;
+    const total = state.people.length;
+    // build count map
+    const counts = {};
+    const who = {};
+    cfg.dates.forEach(d=> state.slots.forEach(t=>{ counts[d+'|'+t]=0; who[d+'|'+t]=[]; }));
+    state.people.forEach(p=>{
+      p.slots.forEach(k=>{
+        if(counts.hasOwnProperty(k)){ counts[k]++; who[k].push(p.name); }
+      });
+    });
+    const wrap = document.getElementById('resultsBody');
+    wrap.innerHTML = `
+      <div class="grid-wrap">
+        <table class="sched" id="heatGrid">
+          <thead>${renderWeekHeaderRows(cfg, d=>`<th class="date-head">${formatDate(d)}</th>`)}</thead>
+          <tbody>
+            ${state.slots.map(t=>`
+              <tr>
+                <td class="time-col ${isHourStart(t)?'hour-start':''}">${formatTime(t)}</td>
+                ${cfg.dates.map(d=>{
+                  const key = d+'|'+t;
+                  const c = counts[key];
+                  const names = who[key];
+                  const ratio = total>0 ? c/total : 0;
+                  const bg = c===0 ? 'transparent' : mixColor(ratio);
+                  const contrastClass = c===0 ? '' : (ratio >= 0.55 ? 'dark-bg' : 'light-bg');
+                  const namesHtml = names.map(n=>`<span class="who-name">${escapeHtml(n)}</span>`).join('');
+                  return `<td class="heat ${isHourStart(t)?'hour-start':''} ${contrastClass} ${c===0?'empty-cell':''}" data-key="${key}" style="background:${bg};">${namesHtml}</td>`;
+                }).join('')}
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+      <div class="legend">
+        <span>0 available</span><span class="grad"></span><span>${total} available</span>
+      </div>
+      <div class="detail-panel" id="detailPanel">Click a cell for the exact date and time.</div>
+    `;
+    document.querySelectorAll('#heatGrid td.heat').forEach(td=>{
+      const show = ()=>{
+        const key = td.dataset.key;
+        const [d,t] = key.split('|');
+        const names = who[key];
+        const panel = document.getElementById('detailPanel');
+        if(names.length===0){
+          panel.innerHTML = `${formatDate(d)} at ${formatTime(t)}: <span class="who">no one yet.</span>`;
+        }else{
+          panel.innerHTML = `<strong>${formatDate(d)} at ${formatTime(t)}</strong> &mdash; ${names.length} of ${total}: <span class="who">${names.map(escapeHtml).join(', ')}</span>`;
+        }
+      };
+      td.addEventListener('click', show);
+    });
+  }
+
+  function mixColor(ratio){
+    // interpolate between accent-soft (#E3EEEA) and accent-deep (#163832)
+    const a = [227,238,234], b = [22,56,50];
+    const c = a.map((v,i)=> Math.round(v + (b[i]-v)*ratio));
+    return `rgb(${c[0]},${c[1]},${c[2]})`;
+  }
+
+  function renderPersonBreakdown(){
+    const cfg = state.config;
+    const wrap = document.getElementById('resultsBody');
+    wrap.innerHTML = `<div class="person-list">${
+      state.people.map(p=>{
+        const bySlugDate = {};
+        p.slots.forEach(k=>{
+          const [d,t] = k.split('|');
+          (bySlugDate[d] = bySlugDate[d] || []).push(t);
+        });
+        const dateStrs = cfg.dates.filter(d=> bySlugDate[d] && bySlugDate[d].length).map(d=>{
+          const ranges = mergeRanges(d, bySlugDate[d], state.slots, cfg.slotMinutes);
+          return `<div><span class="d">${formatDate(d)}:</span> ${ranges.join(', ')}</div>`;
+        });
+        return `
+          <div class="person-card">
+            <div class="name">${escapeHtml(p.name)}</div>
+            <div class="ranges">${dateStrs.length ? dateStrs.join('') : '<em>No slots marked</em>'}${p.comment ? `<div class="comment-note">&ldquo;${escapeHtml(p.comment)}&rdquo;</div>` : ''}</div>
+            <button class="secondary" data-name="${escapeHtml(p.name)}" title="Remove this response">Remove</button>
+          </div>
+        `;
+      }).join('')
+    }</div>`;
+    wrap.querySelectorAll('.person-card button[data-name]').forEach(btn=>{
+      btn.addEventListener('click', async ()=>{
+        const nm = btn.dataset.name;
+        if(!confirm(`Remove ${nm}'s response from this poll?`)) return;
+        await deletePerson(state.pollId, nm);
+        state.people = await loadPeople(state.pollId);
+        renderMain();
+      });
+    });
+  }
+
+  render();
+})();
+</script>
+</body>
+</html>
