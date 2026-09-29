@@ -561,6 +561,38 @@
     await cloudSafeDelete('sched:'+pollId+':avail:'+slug);
   }
 
+  function csvEscape(v){
+    const s = String(v == null ? '' : v);
+    return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+  }
+
+  function downloadResultsCsv(){
+    const cfg = state.config;
+    const header = ['Name'];
+    cfg.dates.forEach(d=> state.slots.forEach(t=> header.push(formatDate(d) + ' ' + formatTime(t))));
+    header.push('Comments');
+    const rows = state.people.map(p=>{
+      const cells = [p.name];
+      cfg.dates.forEach(d=> state.slots.forEach(t=>{
+        cells.push(p.slots.includes(d+'|'+t) ? 'Y' : '');
+      }));
+      cells.push(p.comment || '');
+      return cells;
+    });
+    const lines = [header, ...rows].map(row => row.map(csvEscape).join(','));
+    const csvContent = '\uFEFF' + lines.join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const safeTitle = (cfg.title || 'poll').replace(/[^a-z0-9]+/gi, '-').toLowerCase().replace(/(^-|-$)/g, '');
+    a.download = (safeTitle || 'poll') + '-results.csv';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
   function mergeRanges(dateStr, daySlots, allSlots, slotMinutes){
     // daySlots: sorted array of HH:MM strings that are selected for this date
     if(daySlots.length===0) return [];
@@ -1133,7 +1165,10 @@
           <button class="tab ${state.resultsView==='overlap'?'active':''}" id="viewOverlap" style="margin-right:0;">Overlap by date &amp; time</button>
           <button class="tab ${state.resultsView==='person'?'active':''}" id="viewPerson" style="margin-right:0;">Breakdown by person</button>
         </div>
-        ${hasCloud ? `<button class="secondary" id="refreshBtn">Refresh</button>` : ''}
+        <div style="display:flex; gap:10px;">
+          <button class="secondary" id="exportCsvBtn">Download results (CSV)</button>
+          ${hasCloud ? `<button class="secondary" id="refreshBtn">Refresh</button>` : ''}
+        </div>
       </div>
       <div id="resultsBody"></div>
       ${!hasCloud ? `
@@ -1148,6 +1183,7 @@
     `;
     document.getElementById('viewOverlap').addEventListener('click', ()=>{ state.resultsView='overlap'; renderResultsTab(); });
     document.getElementById('viewPerson').addEventListener('click', ()=>{ state.resultsView='person'; renderResultsTab(); });
+    document.getElementById('exportCsvBtn').addEventListener('click', ()=> downloadResultsCsv());
     if(hasCloud && document.getElementById('refreshBtn')){
       document.getElementById('refreshBtn').addEventListener('click', async ()=>{
         state.people = await loadPeople(state.pollId);
